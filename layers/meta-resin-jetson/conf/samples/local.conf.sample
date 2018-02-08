@@ -61,4 +61,6 @@ BB_DISKMON_DIRS = "\
 
 CONF_VERSION = "1"
 
+CORE_IMAGE_EXTRA_INSTALL += "librealsense2 librealsense2-examples"
+
 HOSTTOOLS += "docker iptables"

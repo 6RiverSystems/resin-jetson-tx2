@@ -23,3 +23,7 @@
 [submodule "layers/meta-rust"]
 	path = layers/meta-rust
 	url = https://github.com/meta-rust/meta-rust.git
+[submodule "layers/meta-intel-realsense"]
+	path = layers/meta-intel-realsense
+	url = git@github.com:6RiverSystems/meta-intel-realsense.git
+	branch = pyro
