@@ -63,4 +63,4 @@ CONF_VERSION = "1"
 
 HOSTTOOLS += "docker iptables"
 
-CORE_IMAGE_EXTRA_INSTALL += "librealsense2 librealsense2-examples"
+CORE_IMAGE_EXTRA_INSTALL += "librealsense2"

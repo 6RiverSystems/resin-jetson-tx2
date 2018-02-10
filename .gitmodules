@@ -27,3 +27,6 @@
 	path = layers/meta-intel-realsense
 	url = git@github.com:6RiverSystems/meta-intel-realsense.git
 	branch = pyro
+[submodule "layers/openembedded-core"]
+	path = layers/openembedded-core
+	url = git://git.openembedded.org/openembedded-core
