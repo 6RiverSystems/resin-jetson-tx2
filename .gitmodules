@@ -26,3 +26,6 @@
 [submodule "layers/openembedded-core"]
 	path = layers/openembedded-core
 	url = git://git.openembedded.org/openembedded-core
+[submodule "layers/poky"]
+	path = layers/poky
+	url = git@github.com:6RiverSystems/poky.git
