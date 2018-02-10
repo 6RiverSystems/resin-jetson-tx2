@@ -65,5 +65,5 @@ HOSTTOOLS += "docker iptables"
 
 DEPENDS_pn-pango+= "libdrm harfbuzz"
 IMAGE_INSTALL_append = " gtk+3 libdrm"
-DISTRO_FEATURES += " wayland ${DISTRO_FEATURES_LIBC}"
+DISTRO_FEATURES += " x11 opengl ${DISTRO_FEATURES_LIBC}"
 CORE_IMAGE_EXTRA_INSTALL += "libdrm librealsense2"
