@@ -63,4 +63,5 @@ CONF_VERSION = "1"
 
 HOSTTOOLS += "docker iptables"
 
-CORE_IMAGE_EXTRA_INSTALL += "gtk+3 librealsense2"
+IMAGE_INSTALL_append = " gtk+3"
+CORE_IMAGE_EXTRA_INSTALL += "librealsense2"
