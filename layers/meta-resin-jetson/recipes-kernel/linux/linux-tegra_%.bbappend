@@ -15,6 +15,7 @@ RESIN_CONFIGS[compat] = " \
     CONFIG_SMARTJOYPLUS_FF=y \
     CONFIG_INPUT_JOYDEV=m \
     CONFIG_INPUT_EVDEV=y \
+    CONFIG_DRM=y
     "
 
 RESIN_CONFIGS_remove = "brcmfmac"
