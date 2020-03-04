@@ -4,6 +4,5 @@ CONNECTIVITY_FIRMWARES_append_jetson-nano = " \
 "
 
 CONNECTIVITY_FIRMWARES_append_jetson-tx2-6 = " \
-    linux-firmware-iwlwifi-9000 \
-    linux-firmware-iwlwifi-misc \
+    linux-firmware-iwlwifi-9260 \
 "

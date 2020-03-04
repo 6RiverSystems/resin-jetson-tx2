@@ -130,15 +130,6 @@ RESIN_CONFIGS[can] = " \
                 CONFIG_MTTCAN_IVC=m \
 "
 
-RESIN_CONFIGS_append_jetson-tx2-6 = " iwlwifi"
-RESIN_CONFIGS_DEPS[iwlwifi] = " \
-                CONFIG_HAS_IOMEM=m \
-                CONFIG_IWLDVM=m \
-                CONFIG_IWLMVM=m \
-                CONFIG_IWLWIFI=m \
-                CONFIG_MAC80211=m \
-"
-
 RESIN_CONFIGS_append_srd3-tx2 = " tpg"
 
 KERNEL_MODULE_AUTOLOAD_srd3-tx2 += " nvhost-vi-tpg "
