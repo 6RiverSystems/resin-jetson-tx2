@@ -1,4 +1,4 @@
-SUMMARY = "Create flash artifacts without flashing"
+SUMMARY = "Create flash artifacts without flashing the Jetson NX"
 
 LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://${RESIN_COREBASE}/COPYING.Apache-2.0;md5=89aea4e17d99a7cacdbeed46a0096b10"
@@ -18,11 +18,11 @@ DEPENDS = " \
 inherit deploy pythonnative perlnative
 
 SRC_URI = " \
-    file://resinOS-flash194.xml \
-    file://partition_specification194.txt \
+    file://resinOS-flash194_nxde.xml \
+    file://partition_specification194_nxde.txt \
     "
 
-KERNEL_DEVICETREE_jetson-xavier = "${DEPLOY_DIR_IMAGE}/tegra194-p2888-0001-p2822-0000.dtb"
+KERNEL_DEVICETREE_jetson-xavier-nx-devkit-emmc = "${DEPLOY_DIR_IMAGE}/tegra194-p3668-all-p3509-0000.dtb"
 DTBFILE ?= "${@os.path.basename(d.getVar('KERNEL_DEVICETREE', True).split()[0])}"
 LNXSIZE ?= "67108864"
 
@@ -40,7 +40,8 @@ OS_KERNEL_CMDLINE = "${@bb.utils.contains('DEVELOPMENT_IMAGE','1','console=ttyTH
 ROOTA_ARGS="root=LABEL=resin-rootA ro rootwait rootfstype=ext4 ${KERNEL_ARGS} ${OS_KERNEL_CMDLINE}"
 ROOTB_ARGS="root=LABEL=resin-rootB ro rootwait rootfstype=ext4 ${KERNEL_ARGS} ${OS_KERNEL_CMDLINE}"
 
-BOOTFILES=" \
+BOOTFILES = "\
+    adsp-fw.bin \
     bmp.blob \
     bpmp_t194.bin \
     camera-rtcpu-rce.img \
@@ -57,11 +58,9 @@ BOOTFILES=" \
     preboot_d15_prod_cr.bin \
     slot_metadata.bin \
     spe_t194.bin \
-    tos-trusty_t194.img \
     warmboot_t194_prod.bin \
     xusb_sil_rel_fw \
     cbo.dtb \
-    adsp-fw.bin \
 "
 
 signfile() {
@@ -75,46 +74,67 @@ signfile() {
     export FAB=${TEGRA_FAB}
     export localbootfile=boot.img
 
-    if [ "${SOC_FAMILY}" = "tegra194" ]; then
-        export CHIPREV=${TEGRA_CHIPREV}
-        export sdramcfg=${MACHINE}.cfg,${MACHINE}-override.cfg
-    else
-        export sdramcfg=${MACHINE}.cfg
-    fi
+    cp ${STAGING_DATADIR}/tegraflash/flashvars .
+    . ./flashvars
 
-    export bins="mb2_bootloader nvtboot_recovery_t194.bin; \
+    export bins=" mb2_bootloader nvtboot_recovery_t194.bin; \
         mts_preboot preboot_c10_prod_cr.bin; \
         mts_mce mce_c10_prod_cr.bin; \
-        mts_proper mts_c10_prod_cr.bin;
+        mts_proper mts_c10_prod_cr.bin; \
         bpmp_fw bpmp_t194.bin; \
-        bpmp_fw_dtb tegra194-a02-bpmp-p2888-a04.dtb; \
+        bpmp_fw_dtb tegra194-a02-bpmp-p3668-a00.dtb; \
         spe_fw spe_t194.bin; \
         tlk tos-trusty_t194.img; \
         eks eks.img; \
         bootloader_dtb ${DTBFILE}"
 
-    tegraflashpy=$(which tegraflash.py)
-    python $tegraflashpy --chip 0x19 \
-    --bl nvtboot_recovery_cpu_t194.bin \
-    --sdram_config ${sdramcfg} \
-    --odmdata 0x9190000 \
-    --applet mb1_t194_prod.bin \
-    --soft_fuses tegra194-mb1-soft-fuses-l4t.cfg \
-    --cmd "sign$1" \
-    --cfg flash.xml.in \
-    --uphy_config tegra194-mb1-uphy-lane-p2888-0000-p2822-0000.cfg \
-    --device_config tegra19x-mb1-bct-device-sdmmc.cfg \
-    --misc_config tegra194-mb1-bct-misc-flash.cfg \
-    --misc_cold_boot_config tegra194-mb1-bct-misc-l4t.cfg \
-    --pinmux_config tegra19x-mb1-pinmux-p2888-0000-a04-p2822-0000-b01.cfg \
-    --gpioint_config tegra194-mb1-bct-gpioint-p2888-0000-p2822-0000.cfg \
-    --pmic_config tegra194-mb1-bct-pmic-p2888-0001-a04-p2822-0000.cfg \
-    --pmc_config tegra19x-mb1-padvoltage-p2888-0000-a00-p2822-0000-a00.cfg \
-    --prod_config tegra19x-mb1-prod-p2888-0000-p2822-0000.cfg \
-    --scr_config tegra194-mb1-bct-scr-cbb-mini.cfg \
-    --scr_cold_boot_config tegra194-mb1-bct-scr-cbb-mini.cfg \
-    --br_cmd_config tegra194-mb1-bct-reset-p2888-0000-p2822-0000.cfg \
-    --dev_params tegra194-br-bct-sdmmc.cfg --bins "${bins}"
+    cat flash.xml.in | sed \
+        -e"s,LNXFILE,${localbootfile}," -e"s,LNXSIZE,${LNXSIZE}," \
+        -e"s,TEGRABOOT,nvtboot_t194.bin," \
+        -e"s,MTSPREBOOT,preboot_c10_prod_cr.bin," \
+        -e"s,MTS_MCE,mce_c10_prod_cr.bin," \
+        -e"s,MTSPROPER,mts_c10_prod_cr.bin," \
+        -e"s,MB1FILE,mb1_t194_prod.bin," \
+        -e"s,BPFFILE,bpmp_t194.bin," \
+        -e"s,BPFDTB_FILE,tegra194-a02-bpmp-p3668-a00.dtb," \
+        -e"s,TBCFILE,$cbootfilename," \
+        -e"s,TBCDTB-FILE,${DTBFILE}," \
+        -e"s,CAMERAFW,camera-rtcpu-rce.img," \
+        -e"s,SPEFILE,spe_t194.bin," \
+	-e"s,VERFILE,bsp_version," \
+        -e"s,WB0BOOT,warmboot_t194_prod.bin," \
+        -e"s,TOSFILE,tos-trusty_t194.img," \
+        -e"s,EKSFILE,eks.img," \
+        -e"s, DTB_FILE, ${DTBFILE}," \
+        -e"s,CBOOTOPTION_FILE,cbo.dtb," \
+        -e"s,RECNAME,recovery," -e"s,RECSIZE,66060288," -e"s,RECDTB-NAME,recovery-dtb," -e"s,BOOTCTRLNAME,kernel-bootctrl," \
+        -e"/RECFILE/d" -e"/RECDTB-FILE/d" -e"/BOOTCTRL-FILE/d" \
+        > $destdir/flash.xml
+
+
+     tegraflashpy=$(which tegraflash.py)
+
+     python $tegraflashpy --bl nvtboot_recovery_cpu_t194.bin \
+     --sdram_config tegra194-mb1-bct-memcfg-p3668-0001-a00.cfg,tegra194-memcfg-sw-override.cfg  \
+     --odmdata 0xB8190000 \
+     --applet mb1_t194_prod.bin \
+     --cmd "sign" \
+     --soft_fuses tegra194-mb1-soft-fuses-l4t.cfg  \
+     --cfg flash.xml \
+     --chip 0x19 \
+     --device_config tegra19x-mb1-bct-device-qspi-p3668.cfg \
+     --misc_cold_boot_config tegra194-mb1-bct-misc-l4t.cfg \
+     --misc_config tegra194-mb1-bct-misc-flash.cfg \
+     --pinmux_config tegra19x-mb1-pinmux-p3668-a01.cfg \
+     --gpioint_config tegra194-mb1-bct-gpioint-p3668-0001-a00.cfg \
+     --pmic_config tegra194-mb1-bct-pmic-p3668-0001-a00.cfg \
+     --pmc_config tegra19x-mb1-padvoltage-p3668-a01.cfg \
+     --prod_config tegra19x-mb1-prod-p3668-0001-a00.cfg \
+     --scr_config tegra194-mb1-bct-scr-cbb-mini-p3668.cfg \
+     --scr_cold_boot_config tegra194-mb1-bct-scr-cbb-mini-p3668.cfg \
+     --br_cmd_config tegra194-mb1-bct-reset-p3668-0001-a00.cfg \
+     --dev_params tegra194-br-bct-qspi.cfg \
+     --bin "${bins}"
 }
 
 do_configure() {
@@ -126,9 +146,11 @@ do_configure() {
     mkdir -p "${WORKDIR}/tegraflash"
     oldwd=`pwd`
     cd "${WORKDIR}/tegraflash"
+    ln -sf "${STAGING_DATADIR}/tegraflash/bsp_version" .
     ln -s "${STAGING_DATADIR}/tegraflash/${MACHINE}.cfg" .
     ln -s "${STAGING_DATADIR}/tegraflash/${MACHINE}-override.cfg" .
     ln -s "${DEPLOY_DIR_IMAGE}/cboot-${MACHINE}.bin" ./cboot_t194.bin
+    ln -s "${DEPLOY_DIR_IMAGE}/tos-${MACHINE}.img" ./tos-trusty_t194.img
 
     mkdir -p ${DEPLOY_DIR_IMAGE}/bootfiles
     cp ./cboot_t194.bin ${DEPLOY_DIR_IMAGE}/bootfiles/
@@ -137,6 +159,9 @@ do_configure() {
         ln -s "${STAGING_DATADIR}/tegraflash/$f" .
         cp "${STAGING_DATADIR}/tegraflash/$f" ${DEPLOY_DIR_IMAGE}/bootfiles/
     done
+
+    cp ${STAGING_DATADIR}/tegraflash/flashvars .
+    . ./flashvars
 
     for f in ${STAGING_DATADIR}/tegraflash/tegra19[4x]-*.cfg; do
         ln -s $f .
@@ -148,17 +173,31 @@ do_configure() {
         cp $f ${DEPLOY_DIR_IMAGE}/bootfiles/
     done
 
+    if [ -n "${NVIDIA_BOARD_CFG}" ]; then
+        ln -s "${STAGING_DATADIR}/tegraflash/board_config_${MACHINE}.xml" .
+        boardcfg=board_config_${MACHINE}.xml
+    else
+        boardcfg=
+    fi
+    export boardcfg
+
+
     ln -s ${STAGING_BINDIR_NATIVE}/tegra186-flash .
 
     cp "${DEPLOY_DIR_IMAGE}/${DTBFILE}" ./${DTBFILE}
-    cp ./${DTBFILE} ./tegra194-p2888-0001-p2822-0000-rootA.dtb
-    cp ./${DTBFILE} ./tegra194-p2888-0001-p2822-0000-rootB.dtb
+
+    # TODO: Do the A/B signed dtbs
+    #cp ./${DTBFILE} ./tegra194-p2888-0001-p2822-0000-rootA.dtb
+    #cp ./${DTBFILE} ./tegra194-p2888-0001-p2822-0000-rootB.dtb
 
     # Add rootA/rootB and save as separate dtbs to be used when
     # switching partitions
     bootargs="`fdtget ./${DTBFILE} /chosen bootargs 2>/dev/null`"
-    fdtput -t s ./tegra194-p2888-0001-p2822-0000-rootA.dtb /chosen bootargs "$bootargs ${ROOTA_ARGS}"
-    fdtput -t s ./tegra194-p2888-0001-p2822-0000-rootB.dtb /chosen bootargs "$bootargs ${ROOTB_ARGS}"
+    fdtput -t s ./${DTBFILE} /chosen bootargs "$bootargs ${ROOTA_ARGS} shell"
+
+    # TODO: Do the A/B signed dtbs. This implies changing the XML and partition template too.
+    #fdtput -t s ./tegra194-p2888-0001-p2822-0000-rootB.dtb /chosen bootargs "$bootargs ${ROOTB_ARGS}"
+    #fdtput -t s ./tegra194-p2888-0001-p2822-0000-rootB.dtb /chosen bootargs "$bootargs ${ROOTB_ARGS}"
 
     # Make bootable image from kernel and sign it
     cp ${DEPLOY_DIR_IMAGE}/${LNXFILE} ${LNXFILE}
@@ -169,7 +208,7 @@ do_configure() {
     ./mkbootimg --kernel ${LNXFILE} --ramdisk initrd --board mmcblk0p1 --output boot.img
 
     # prepare flash.xml.in to be used in signing
-    cp ${WORKDIR}/resinOS-flash194.xml flash.xml.in
+    cp ${WORKDIR}/resinOS-flash194_nxde.xml flash.xml.in
 
     # prep env for tegraflash
     rm -f ./slot_metadata.bin
@@ -188,19 +227,22 @@ do_configure() {
     rm -rf signed
 
     # Sign all tegra bins
-    signfile ""
+    signfile
 
-    # any binary written to a partition that
-    # has signing mandatory needs to be signed
-    signfile " tegra194-p2888-0001-p2822-0000-rootA.dtb"
-    signfile " tegra194-p2888-0001-p2822-0000-rootB.dtb"
+    # TODO: Do the A/B dtbs
+    #signfile " tegra194-p2888-0001-p2822-0000-rootA.dtb"
+    #signfile " tegra194-p2888-0001-p2822-0000-rootB.dtb"
 
     # Needed to embedd plain initramfs kernel and dtb to main image
-    cp ${LNXFILE} ${DEPLOY_DIR_IMAGE}/bootfiles/Image
-    cp -r tegra194-p2888-0001-p2822-0000-root*.dtb ${DEPLOY_DIR_IMAGE}/bootfiles/
-    cp ${WORKDIR}/resinOS-flash194.xml ${DEPLOY_DIR_IMAGE}/bootfiles/flash.xml
+    cp $localbootfile ${DEPLOY_DIR_IMAGE}/bootfiles/Image
+
+    # TODO: Do the A/B dtbs
+    #cp -r tegra194-p2888-0001-p2822-0000-root*.dtb ${DEPLOY_DIR_IMAGE}/bootfiles/
+    cp ${WORKDIR}/resinOS-flash194_nxde.xml ${DEPLOY_DIR_IMAGE}/bootfiles/flash.xml
     cp -r signed/* ${DEPLOY_DIR_IMAGE}/bootfiles/
-    cp -r tegra194-p2888-0001-p2822-0000-root*_sigheader.dtb.encrypt ${DEPLOY_DIR_IMAGE}/bootfiles/
+
+    # TODO: Do the A/B dtbs
+    #cp -r tegra194-p2888-0001-p2822-0000-root*_sigheader.dtb.encrypt ${DEPLOY_DIR_IMAGE}/bootfiles/
     dd if=/dev/zero of="${DEPLOY_DIR_IMAGE}/bootfiles/bmp.blob" bs=1K count=70
 }
 
@@ -209,12 +251,14 @@ do_install() {
     install -d ${D}/${BINARY_INSTALL_PATH}
     cp -r ${S}/tegraflash/signed/* ${D}/${BINARY_INSTALL_PATH}
     # signed boot.img isn't needed in rootfs
-    rm ${D}/${BINARY_INSTALL_PATH}/boot*im*
-    cp ${S}/tegraflash/tegra194-p2888-0001-p2822-0000-rootA.dtb ${D}/${BINARY_INSTALL_PATH}/
-    cp ${WORKDIR}/partition_specification194.txt ${D}/${BINARY_INSTALL_PATH}/
-    cp -r ${S}/tegraflash/tegra194-p2888-0001-p2822-0000-root*sigheader.dtb.encrypt ${D}/${BINARY_INSTALL_PATH}
+    rm ${D}/${BINARY_INSTALL_PATH}/boot*im* || true
+
+    # TODO: Do the A/B dtbs
+    #cp ${S}/tegraflash/tegra194-p2888-0001-p2822-0000-rootA.dtb ${D}/${BINARY_INSTALL_PATH}/
+    cp ${WORKDIR}/partition_specification194_nxde.txt ${D}/${BINARY_INSTALL_PATH}/
+    #cp -r ${S}/tegraflash/tegra194-p2888-0001-p2822-0000-root*sigheader.dtb.encrypt ${D}/${BINARY_INSTALL_PATH}
     # When generating image, this will be default dtb containing cmdline with root set to resin-rootA
-    cp ${S}/tegraflash/tegra194-p2888-0001-p2822-0000-rootA_sigheader.dtb.encrypt ${DEPLOY_DIR_IMAGE}/bootfiles/tegra194-p2888-0001-p2822-0000_sigheader.dtb.encrypt
+    #cp ${S}/tegraflash/tegra194-p2888-0001-p2822-0000-rootA_sigheader.dtb.encrypt ${DEPLOY_DIR_IMAGE}/bootfiles/tegra194-p2888-0001-p2822-0000_sigheader.dtb.encrypt
 }
 
 do_deploy() {
@@ -240,9 +284,12 @@ do_configure[depends] += " tegra-binaries:do_preconfigure"
 do_configure[depends] += " virtual/kernel:do_deploy \
                            virtual/bootloader:do_deploy \
 "
+do_configure[depends] += " cboot:do_deploy"
+do_configure[depends] += " tos-prebuilt:do_deploy"
+
 do_install[depends] += " virtual/kernel:do_deploy"
 do_populate_lic[depends] += "tegra-binaries:do_unpack"
 
 addtask do_deploy before do_package after do_install
 
-COMPATIBLE_MACHINE = "jetson-xavier"
+COMPATIBLE_MACHINE = "jetson-xavier-nx-devkit-emmc"
